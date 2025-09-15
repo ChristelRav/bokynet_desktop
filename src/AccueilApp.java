@@ -3,6 +3,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 
 public class AccueilApp {
 
@@ -73,10 +74,21 @@ public class AccueilApp {
                     mainPanel.setLayout(new BorderLayout());
 
                     // Label titre "Liste des livres"
+                     JPanel topPanel = new JPanel(new BorderLayout());
                     JLabel titreLabel = new JLabel("Liste des livres");
                     titreLabel.setHorizontalAlignment(SwingConstants.CENTER);
                     titreLabel.setFont(new Font("Arial", Font.BOLD, 16));
                     mainPanel.add(titreLabel, BorderLayout.NORTH);
+
+                    // Bouton Ajouter
+                    JButton addButton = new JButton("Ajouter");
+                    addButton.addActionListener(ev -> {
+                        addLivre(mainPanel);
+                    });
+
+                    topPanel.add(titreLabel, BorderLayout.CENTER);
+                    topPanel.add(addButton, BorderLayout.EAST);
+                    mainPanel.add(topPanel, BorderLayout.NORTH);
 
                     // JTable avec scroll
                     JTable table = new JTable(data, colonnes);
@@ -349,6 +361,176 @@ public class AccueilApp {
 
         dialog.setVisible(true);
     }
+
+    public void addLivre(JPanel mainPanel) {
+        JDialog dialog = new JDialog((Frame) null, "Insertion Livre", true);
+        dialog.setSize(500, 400);
+        dialog.setLocationRelativeTo(mainPanel);
+        dialog.setLayout(new GridBagLayout());
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // --- Champs du formulaire ---
+        // 1. Titre
+        gbc.gridx = 0; gbc.gridy = 0;
+        dialog.add(new JLabel("Titre :"), gbc);
+        gbc.gridx = 1;
+        JTextField titreField = new JTextField(20);
+        dialog.add(titreField, gbc);
+
+        // 2. Date de sortie
+        gbc.gridx = 0; gbc.gridy++;
+        dialog.add(new JLabel("Date de sortie (YYYY-MM-DD) :"), gbc);
+        gbc.gridx = 1;
+        JTextField dateField = new JTextField(10);
+        dialog.add(dateField, gbc);
+
+        // 3. Résumé
+        gbc.gridx = 0; gbc.gridy++;
+        dialog.add(new JLabel("Résumé :"), gbc);
+        gbc.gridx = 1;
+        JTextArea resumeArea = new JTextArea(4, 20);
+        JScrollPane scrollResume = new JScrollPane(resumeArea);
+        dialog.add(scrollResume, gbc);
+
+        // 4. Auteur (ComboBox)
+        gbc.gridx = 0; gbc.gridy++;
+        dialog.add(new JLabel("Auteur :"), gbc);
+        gbc.gridx = 1;
+        JComboBox<String> auteurCombo = new JComboBox<>();
+        try {
+            String auteursJson = ApiService.getAuteurs();
+            org.json.JSONArray auteursArray = new org.json.JSONArray(auteursJson);
+            for (int i = 0; i < auteursArray.length(); i++) {
+                org.json.JSONObject obj = auteursArray.getJSONObject(i);
+                auteurCombo.addItem(obj.getInt("idauteur") + " - " + obj.getString("auteur"));
+            }
+        } catch (Exception ex) {
+            auteurCombo.addItem("Erreur chargement auteurs");
+        }
+        dialog.add(auteurCombo, gbc);
+
+        // 5. Catégorie (ComboBox)
+        gbc.gridx = 0; gbc.gridy++;
+        dialog.add(new JLabel("Catégorie :"), gbc);
+        gbc.gridx = 1;
+        JComboBox<String> categorieCombo = new JComboBox<>();
+        try {
+            String catJson = ApiService.getCategorie();
+            org.json.JSONArray catArray = new org.json.JSONArray(catJson);
+            for (int i = 0; i < catArray.length(); i++) {
+                org.json.JSONObject obj = catArray.getJSONObject(i);
+                categorieCombo.addItem(obj.getInt("idcategorie") + " - " + obj.getString("categorie"));
+            }
+        } catch (Exception ex) {
+            categorieCombo.addItem("Erreur chargement catégories");
+        }
+        dialog.add(categorieCombo, gbc);
+
+        // 6. Couverture (Upload)
+        gbc.gridx = 0; gbc.gridy++;
+        dialog.add(new JLabel("Couverture :"), gbc);
+        gbc.gridx = 1;
+        JTextField couvertureField = new JTextField(15);
+        JButton btnUploadImg = new JButton("Choisir image");
+        JPanel imgPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        imgPanel.add(couvertureField);
+        imgPanel.add(btnUploadImg);
+        dialog.add(imgPanel, gbc);
+
+        btnUploadImg.addActionListener(ev -> {
+            JFileChooser chooser = new JFileChooser();
+            if (chooser.showOpenDialog(dialog) == JFileChooser.APPROVE_OPTION) {
+                File selected = chooser.getSelectedFile();
+                try {
+                    File dest = new File("img_livre/" + selected.getName());
+                    java.nio.file.Files.copy(selected.toPath(), dest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    couvertureField.setText(selected.getName());
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(dialog, "Erreur upload image: " + ex.getMessage());
+                }
+            }
+        });
+
+        // 7. Fichier PDF (Upload)
+        gbc.gridx = 0; gbc.gridy++;
+        dialog.add(new JLabel("Fichier PDF :"), gbc);
+        gbc.gridx = 1;
+        JTextField fichierField = new JTextField(15);
+        JButton btnUploadPdf = new JButton("Choisir PDF");
+        JPanel pdfPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        pdfPanel.add(fichierField);
+        pdfPanel.add(btnUploadPdf);
+        dialog.add(pdfPanel, gbc);
+
+        btnUploadPdf.addActionListener(ev -> {
+            JFileChooser chooser = new JFileChooser();
+            if (chooser.showOpenDialog(dialog) == JFileChooser.APPROVE_OPTION) {
+                File selected = chooser.getSelectedFile();
+                try {
+                    File dest = new File("livre/" + selected.getName());
+                    java.nio.file.Files.copy(selected.toPath(), dest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    fichierField.setText(selected.getName());
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(dialog, "Erreur upload PDF: " + ex.getMessage());
+                }
+            }
+        });
+
+        // --- Bouton Enregistrer ---
+        gbc.gridx = 0; gbc.gridy++;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        JButton btnSave = new JButton("Ajouter Livre");
+        dialog.add(btnSave, gbc);
+
+        btnSave.addActionListener(e -> {
+            try {
+                String titre = titreField.getText().trim();
+                String dateSortie = dateField.getText().trim();
+                String resume = resumeArea.getText().trim();
+                String couverture = couvertureField.getText().trim();
+                String fichier = fichierField.getText().trim();
+
+                if (titre.isEmpty() || dateSortie.isEmpty() || resume.isEmpty() ||
+                    couverture.isEmpty() || fichier.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, "Tous les champs sont obligatoires !");
+                    return;
+                }
+
+                // Récupérer ID auteur
+                int auteurId = Integer.parseInt(auteurCombo.getSelectedItem().toString().split(" - ")[0]);
+                int categorieId = Integer.parseInt(categorieCombo.getSelectedItem().toString().split(" - ")[0]);
+
+                String resumeJson = resume
+                .replace("\n", "\\n")   // remplace les retours à la ligne
+                .replace("\"", "\\\""); // échappe les guillemets
+
+                 System.out.println(">>> Envoi livre : " +
+                "titre=" + titre + ", " +
+                "fichier=" + fichier + ", " +
+                "couverture=" + couverture + ", " +
+                "categorieId=" + categorieId + ", " +
+                "auteurId=" + auteurId + ", " +
+                "dateSortie=" + dateSortie + ", " +
+                "resume=" + resume);
+
+                ApiService.addLivre(titre, fichier, couverture, categorieId, auteurId, dateSortie, resumeJson);
+                JOptionPane.showMessageDialog(dialog, "Livre ajouté avec succès !");
+                dialog.dispose();
+                loadLivre(mainPanel);
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog, "Erreur ajout livre: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
+
+        dialog.setVisible(true);
+    }
+
 
     
 
