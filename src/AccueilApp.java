@@ -15,10 +15,14 @@ public class AccueilApp {
         JButton btnLivre = new JButton("LIVRE");
         JButton btnCategorie = new JButton("CATEGORIE");
         JButton btnAuteur = new JButton("AUTEUR");
+         JButton btnFavoris = new JButton("Favoris");
+
+
 
         topPanel.add(btnLivre);
         topPanel.add(btnCategorie);
         topPanel.add(btnAuteur);
+        topPanel.add(btnFavoris);
 
         // Panel central pour le contenu
         JPanel mainPanel = new JPanel();
@@ -43,6 +47,11 @@ public class AccueilApp {
         btnAuteur.addActionListener(e -> {
             mainPanel.removeAll();
             loadAuteur(mainPanel);
+        });
+
+          btnFavoris.addActionListener(e -> {
+            mainPanel.removeAll();
+            loadFavoris(mainPanel);
         });
 
         // Charger la liste des livres par défaut
@@ -99,10 +108,22 @@ public class AccueilApp {
                     mainPanel.add(scrollPane, BorderLayout.CENTER);
 
                     // Label bienvenue en bas
-                    JLabel welcomeLabel = new JLabel("Bienvenue dans la partie administrateur Desktop de BokyNet");
-                    welcomeLabel.setHorizontalAlignment(SwingConstants.CENTER);
-                    welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
-                    mainPanel.add(welcomeLabel, BorderLayout.SOUTH);
+                     JPanel bottomPanel = new JPanel(new BorderLayout());
+                    bottomPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+
+                    JLabel welcomeLabel = new JLabel("Desktop de BokyNet");
+                        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
+                        bottomPanel.add(welcomeLabel, BorderLayout.WEST); 
+
+                                        JButton logoutButton = new JButton("Déconnexion");
+                        logoutButton.addActionListener(e -> {
+                            SessionManager.accessToken = null;
+                            SessionManager.refreshToken = null;
+                            JOptionPane.showMessageDialog(mainPanel, "Déconnecté !");
+                        });
+                        bottomPanel.add(logoutButton, BorderLayout.EAST); 
+
+                        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
                     mainPanel.revalidate();
                     mainPanel.repaint();
@@ -165,10 +186,22 @@ public class AccueilApp {
                     mainPanel.add(scrollPane, BorderLayout.CENTER);
 
                     // Label bienvenue en bas
-                    JLabel welcomeLabel = new JLabel("Bienvenue dans la partie administrateur Desktop de BokyNet");
-                    welcomeLabel.setHorizontalAlignment(SwingConstants.CENTER);
-                    welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
-                    mainPanel.add(welcomeLabel, BorderLayout.SOUTH);
+                     JPanel bottomPanel = new JPanel(new BorderLayout());
+                    bottomPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+
+                    JLabel welcomeLabel = new JLabel("Desktop de BokyNet");
+                        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
+                        bottomPanel.add(welcomeLabel, BorderLayout.WEST); 
+
+                                        JButton logoutButton = new JButton("Déconnexion");
+                        logoutButton.addActionListener(e -> {
+                            SessionManager.accessToken = null;
+                            SessionManager.refreshToken = null;
+                            JOptionPane.showMessageDialog(mainPanel, "Déconnecté !");
+                        });
+                        bottomPanel.add(logoutButton, BorderLayout.EAST); 
+
+                        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
                     mainPanel.revalidate();
                     mainPanel.repaint();
@@ -235,10 +268,22 @@ public class AccueilApp {
                     mainPanel.add(scrollPane, BorderLayout.CENTER);
 
                     // Label bienvenue en bas
-                    JLabel welcomeLabel = new JLabel("Bienvenue dans la partie administrateur Desktop de BokyNet");
-                    welcomeLabel.setHorizontalAlignment(SwingConstants.CENTER);
-                    welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
-                    mainPanel.add(welcomeLabel, BorderLayout.SOUTH);
+                     JPanel bottomPanel = new JPanel(new BorderLayout());
+                    bottomPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+
+                    JLabel welcomeLabel = new JLabel("Desktop de BokyNet");
+                        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
+                        bottomPanel.add(welcomeLabel, BorderLayout.WEST); 
+
+                                        JButton logoutButton = new JButton("Déconnexion");
+                        logoutButton.addActionListener(e -> {
+                            SessionManager.accessToken = null;
+                            SessionManager.refreshToken = null;
+                            JOptionPane.showMessageDialog(mainPanel, "Déconnecté !");
+                        });
+                        bottomPanel.add(logoutButton, BorderLayout.EAST); 
+
+                        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
                     mainPanel.revalidate();
                     mainPanel.repaint();
@@ -529,6 +574,80 @@ public class AccueilApp {
         });
 
         dialog.setVisible(true);
+    }
+
+    public void loadFavoris(JPanel mainPanel) {
+        new Thread(() -> {
+            try {
+                String response = ApiService.getFavoris();
+                org.json.JSONArray favorisArray = new org.json.JSONArray(response);
+
+                // Colonnes du tableau
+                String[] colonnes = {"Titre", "Auteur", "Catégorie", "DateSortie"};
+                Object[][] data = new Object[favorisArray.length()][4];
+
+                for (int i = 0; i < favorisArray.length(); i++) {
+                    org.json.JSONObject fav = favorisArray.getJSONObject(i);
+                    org.json.JSONObject livre = fav.getJSONObject("livre");
+                    org.json.JSONObject auteur = livre.getJSONObject("auteur");
+                    org.json.JSONObject categorie = livre.getJSONObject("categorie");
+
+                    data[i][0] = livre.getString("titre").trim();
+                    data[i][1] = auteur.getString("auteur");
+                    data[i][2] = categorie.getString("categorie");
+                    data[i][3] = livre.getString("dateSortie");
+                }
+
+                SwingUtilities.invokeLater(() -> {
+                    mainPanel.removeAll();
+                    mainPanel.setLayout(new BorderLayout());
+
+                    JLabel titreLabel = new JLabel("Liste des favoris");
+                    titreLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                    titreLabel.setFont(new Font("Arial", Font.BOLD, 16));
+                    mainPanel.add(titreLabel, BorderLayout.NORTH);
+
+                    JTable table = new JTable(data, colonnes);
+                    table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+                    table.setRowHeight(30);
+
+                    JScrollPane scrollPane = new JScrollPane(table);
+                    mainPanel.add(scrollPane, BorderLayout.CENTER);
+
+                    // Label bienvenue en bas
+
+                    JPanel bottomPanel = new JPanel(new BorderLayout());
+                    bottomPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+
+                    JLabel welcomeLabel = new JLabel("Desktop de BokyNet");
+                        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
+                        bottomPanel.add(welcomeLabel, BorderLayout.WEST); 
+
+                                        JButton logoutButton = new JButton("Déconnexion");
+                        logoutButton.addActionListener(e -> {
+                            SessionManager.accessToken = null;
+                            SessionManager.refreshToken = null;
+                            JOptionPane.showMessageDialog(mainPanel, "Déconnecté !");
+                        });
+                        bottomPanel.add(logoutButton, BorderLayout.EAST); 
+
+                        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+
+                        mainPanel.revalidate();
+                        mainPanel.repaint();
+                    });
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                SwingUtilities.invokeLater(() -> {
+                    mainPanel.removeAll();
+                    mainPanel.setLayout(new FlowLayout());
+                    mainPanel.add(new JLabel("Erreur lors du chargement des favoris !"));
+                    mainPanel.revalidate();
+                    mainPanel.repaint();
+                });
+            }
+        }).start();
     }
 
 
